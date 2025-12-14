@@ -22,20 +22,36 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ task })
       });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        alert("Lỗi: " + (errorData.error || 'Thêm task thất bại'));
+        return;
+      }
+      
       const newTodo = await res.json();
       setTodos([...todos, newTodo]);
       setTask('');
     } catch (err) {
-      alert("Lỗi thêm task: " + err);
+      console.error("Add task error:", err);
+      alert("Lỗi thêm task: " + err.message);
     }
   };
 
   const deleteTask = async (id) => {
     try {
-      await fetch(`/api/todos/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/todos/${id}`, { method: 'DELETE' });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        alert("Lỗi: " + (errorData.error || 'Xóa task thất bại'));
+        return;
+      }
+      
       setTodos(todos.filter(t => t.id !== id));
     } catch (err) {
-      alert("Lỗi xóa task: " + err);
+      console.error("Delete task error:", err);
+      alert("Lỗi xóa task: " + err.message);
     }
   };
 
@@ -46,10 +62,18 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ completed: !currentCompleted })
       });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        alert("Lỗi: " + (errorData.error || 'Cập nhật task thất bại'));
+        return;
+      }
+      
       const updatedTodo = await res.json();
       setTodos(todos.map(t => t.id === id ? updatedTodo : t));
     } catch (err) {
-      alert("Lỗi cập nhật task: " + err);
+      console.error("Toggle task error:", err);
+      alert("Lỗi cập nhật task: " + err.message);
     }
   };
 
