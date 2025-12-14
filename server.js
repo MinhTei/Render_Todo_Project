@@ -13,23 +13,41 @@ const pool = new Pool({
 });
 
 // 2. Tạo bảng dữ liệu nếu chưa có (Chạy 1 lần đầu)
-pool.query(`
-  CREATE TABLE IF NOT EXISTS todos (
-    id SERIAL PRIMARY KEY,
-    task TEXT NOT NULL,
-    completed BOOLEAN DEFAULT false
-  );
-`);
+(async () => {
+  try {
+    // Kiểm tra xem bảng có tồn tại không
+    const checkTable = await pool.query(
+      "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'todos')"
+    );
+    
+    if (!checkTable.rows[0].exists) {
+      // Nếu bảng không tồn tại, tạo mới
+      await pool.query(`
+        CREATE TABLE todos (
+          id SERIAL PRIMARY KEY,
+          task TEXT NOT NULL,
+          completed BOOLEAN DEFAULT false
+        );
+      `);
+      console.log('Created todos table');
+    } else {
+      // Nếu bảng tồn tại, thêm cột nếu chưa có
+      await pool.query(`
+        ALTER TABLE todos ADD COLUMN IF NOT EXISTS id SERIAL PRIMARY KEY;
+      `).catch(() => {}); // Ignore error nếu cột đã tồn tại
+      
+      await pool.query(`
+        ALTER TABLE todos ADD COLUMN IF NOT EXISTS completed BOOLEAN DEFAULT false;
+      `).catch(() => {}); // Ignore error nếu cột đã tồn tại
+      
+      console.log('Todos table already exists, columns checked');
+    }
+  } catch (err) {
+    console.error('Database initialization error:', err.message);
+  }
+})();
 
-// 3. Thêm cột completed nếu chưa có (Để support cơ sở dữ liệu cũ)
-pool.query(`
-  ALTER TABLE todos ADD COLUMN IF NOT EXISTS completed BOOLEAN DEFAULT false;
-`).catch(err => {
-  // Bỏ qua lỗi nếu cột đã tồn tại
-  console.log('ALTER TABLE info:', err.message);
-});
-
-// 4. API Lấy danh sách
+// 3. API Lấy danh sách
 app.get('/api/todos', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM todos ORDER BY id DESC');
@@ -41,7 +59,7 @@ app.get('/api/todos', async (req, res) => {
   }
 });
 
-// 5. API Thêm công việc
+// 4. API Thêm công việc
 app.post('/api/todos', async (req, res) => {
   try {
     const { task } = req.body;
@@ -62,7 +80,7 @@ app.post('/api/todos', async (req, res) => {
   }
 });
 
-// 6. API Xóa công việc
+// 5. API Xóa công việc
 app.delete('/api/todos/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
@@ -84,7 +102,7 @@ app.delete('/api/todos/:id', async (req, res) => {
   }
 });
 
-// 7. API Cập nhật trạng thái hoàn thành
+// 6. API Cập nhật trạng thái hoàn thành
 app.put('/api/todos/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
@@ -120,7 +138,7 @@ app.put('/api/todos/:id', async (req, res) => {
   }
 });
 
-// 8. Cấu hình phục vụ React (Sau khi Build)
+// 7. Cấu hình phục vụ React (Sau khi Build)
 app.use(express.static(path.join(__dirname, 'client/dist')));
 
 app.get(/.*/, (req, res) => {
