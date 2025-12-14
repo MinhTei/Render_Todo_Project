@@ -24,10 +24,10 @@ pool.query(`
 // 3. API Lấy danh sách
 app.get('/api/todos', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM todos');
+    const result = await pool.query('SELECT * FROM todos ORDER BY id DESC');
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
+    console.error('GET /api/todos error:', err);
     res.status(500).json({ error: 'Lỗi lấy dữ liệu' });
   }
 });
@@ -36,10 +36,15 @@ app.get('/api/todos', async (req, res) => {
 app.post('/api/todos', async (req, res) => {
   try {
     const { task } = req.body;
+    
+    if (!task || !task.trim()) {
+      return res.status(400).json({ error: 'Task không được để trống' });
+    }
+    
     const result = await pool.query('INSERT INTO todos (task) VALUES ($1) RETURNING *', [task]);
     res.json(result.rows[0]);
   } catch (err) {
-    console.error(err);
+    console.error('POST /api/todos error:', err);
     res.status(500).json({ error: 'Lỗi thêm task' });
   }
 });
@@ -48,10 +53,15 @@ app.post('/api/todos', async (req, res) => {
 app.delete('/api/todos/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    await pool.query('DELETE FROM todos WHERE id = $1', [id]);
+    const result = await pool.query('DELETE FROM todos WHERE id = $1 RETURNING *', [id]);
+    
+    if (!result.rows[0]) {
+      return res.status(404).json({ error: 'Task không tìm thấy' });
+    }
+    
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
+    console.error('DELETE /api/todos/:id error:', err);
     res.status(500).json({ error: 'Lỗi xóa task' });
   }
 });
@@ -61,11 +71,21 @@ app.put('/api/todos/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { completed } = req.body;
+    
+    if (completed === undefined) {
+      return res.status(400).json({ error: 'completed field is required' });
+    }
+    
     const result = await pool.query('UPDATE todos SET completed = $1 WHERE id = $2 RETURNING *', [completed, id]);
+    
+    if (!result.rows[0]) {
+      return res.status(404).json({ error: 'Task không tìm thấy' });
+    }
+    
     res.json(result.rows[0]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Lỗi cập nhật task' });
+    console.error('PUT /api/todos/:id error:', err);
+    res.status(500).json({ error: 'Lỗi cập nhật task', details: err.message });
   }
 });
 
