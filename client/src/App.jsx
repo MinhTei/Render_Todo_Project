@@ -53,8 +53,9 @@ function App() {
     }
   };
 
-  const completedCount = todos.filter(t => t.completed).length;
-  const pendingCount = todos.length - completedCount;
+  const pendingTodos = todos.filter(t => !t.completed);
+  const completedTodos = todos.filter(t => t.completed);
+  const completedCount = completedTodos.length;
 
   return (
     <div className="app-container">
@@ -81,56 +82,106 @@ function App() {
           </div>
         </form>
 
-        <div className="stats">
-          <div className="stat-item completed">
-            <span className="stat-number">{completedCount}</span>
-            <span className="stat-label">Hoàn thành</span>
-          </div>
-          <div className="stat-divider"></div>
-          <div className="stat-item pending">
-            <span className="stat-number">{pendingCount}</span>
-            <span className="stat-label">Chưa làm</span>
-          </div>
-          <div className="stat-divider"></div>
-          <div className="stat-item total">
-            <span className="stat-number">{todos.length}</span>
-            <span className="stat-label">Tổng cộng</span>
-          </div>
-        </div>
-
-        <div className="todos-container">
-          {todos.length === 0 ? (
-            <div className="empty-state">
-              <p>🎯 Hãy thêm công việc đầu tiên của bạn!</p>
+        <div className="content-wrapper">
+          {/* Cột bên trái: Công việc cần làm */}
+          <div className="left-column">
+            <div className="column-header">
+              <h2>📋 Công việc cần làm</h2>
+              <span className="badge-pending">{pendingTodos.length}</span>
             </div>
-          ) : (
-            <ul className="todos-list">
-              {todos.map((t, index) => (
-                <li key={t.id} className={`todo-item ${t.completed ? 'completed' : ''}`}>
-                  <div className="todo-checkbox">
-                    <input 
-                      type="checkbox"
-                      checked={t.completed}
-                      onChange={() => toggleTask(t.id, t.completed)}
-                      className="checkbox-input"
-                    />
-                    <span className="checkmark"></span>
-                  </div>
-                  <div className="todo-content">
-                    <span className="todo-number">{index + 1}</span>
-                    <span className="todo-text">{t.task}</span>
-                  </div>
-                  <button 
-                    onClick={() => deleteTask(t.id)}
-                    className="btn-delete"
-                    title="Xóa"
-                  >
-                    🗑️
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+
+            <div className="todos-container">
+              {pendingTodos.length === 0 ? (
+                <div className="empty-state">
+                  <p>🎉 Tất cả công việc đã hoàn thành!</p>
+                </div>
+              ) : (
+                <ul className="todos-list">
+                  {pendingTodos.map((t, index) => (
+                    <li key={t.id} className="todo-item">
+                      <div className="todo-checkbox">
+                        <input 
+                          type="checkbox"
+                          checked={t.completed}
+                          onChange={() => toggleTask(t.id, t.completed)}
+                          className="checkbox-input"
+                        />
+                        <span className="checkmark"></span>
+                      </div>
+                      <div className="todo-content">
+                        <span className="todo-number">{index + 1}</span>
+                        <span className="todo-text">{t.task}</span>
+                      </div>
+                      <button 
+                        onClick={() => deleteTask(t.id)}
+                        className="btn-delete"
+                        title="Xóa"
+                      >
+                        🗑️
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          {/* Cột bên phải: Công việc hoàn thành + Thống kê */}
+          <div className="right-column">
+            <div className="column-header">
+              <h2>✅ Hoàn thành</h2>
+              <span className="badge-completed">{completedCount}</span>
+            </div>
+
+            <div className="stats-section">
+              <div className="stat-card">
+                <div className="stat-value">{todos.length}</div>
+                <div className="stat-name">Tổng cộng</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-value">{pendingTodos.length}</div>
+                <div className="stat-name">Chưa làm</div>
+              </div>
+              <div className="stat-card highlight">
+                <div className="stat-value">{completedCount}</div>
+                <div className="stat-name">Hoàn thành</div>
+              </div>
+            </div>
+
+            <div className="todos-container">
+              {completedTodos.length === 0 ? (
+                <div className="empty-state">
+                  <p>📝 Hoàn thành công việc để xem ở đây</p>
+                </div>
+              ) : (
+                <ul className="todos-list completed-list">
+                  {completedTodos.map((t) => (
+                    <li key={t.id} className="todo-item completed">
+                      <div className="todo-checkbox">
+                        <input 
+                          type="checkbox"
+                          checked={t.completed}
+                          onChange={() => toggleTask(t.id, t.completed)}
+                          className="checkbox-input"
+                        />
+                        <span className="checkmark"></span>
+                      </div>
+                      <div className="todo-content">
+                        <span className="todo-text">{t.task}</span>
+                      </div>
+                      <button 
+                        onClick={() => deleteTask(t.id)}
+                        className="btn-delete"
+                        title="Xóa"
+                      >
+                        🗑️
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
         </div>
 
         <footer className="app-footer">
