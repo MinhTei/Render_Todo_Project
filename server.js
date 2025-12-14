@@ -16,7 +16,8 @@ const pool = new Pool({
 pool.query(`
   CREATE TABLE IF NOT EXISTS todos (
     id SERIAL PRIMARY KEY,
-    task TEXT NOT NULL
+    task TEXT NOT NULL,
+    completed BOOLEAN DEFAULT false
   );
 `);
 
@@ -41,7 +42,30 @@ app.post('/api/todos', async (req, res) => {
   }
 });
 
-// 5. Cấu hình phục vụ React (Sau khi Build)
+// 5. API Xóa công việc
+app.delete('/api/todos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query('DELETE FROM todos WHERE id = $1', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+// 6. API Cập nhật trạng thái hoàn thành
+app.put('/api/todos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { completed } = req.body;
+    const result = await pool.query('UPDATE todos SET completed = $1 WHERE id = $2 RETURNING *', [completed, id]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+// 7. Cấu hình phục vụ React (Sau khi Build)
 app.use(express.static(path.join(__dirname, 'client/dist')));
 
 app.get(/.*/, (req, res) => {
