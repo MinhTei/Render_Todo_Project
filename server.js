@@ -27,7 +27,8 @@ app.get('/api/todos', async (req, res) => {
     const result = await pool.query('SELECT * FROM todos');
     res.json(result.rows);
   } catch (err) {
-    res.status(500).send(err.message);
+    console.error(err);
+    res.status(500).json({ error: 'Lỗi lấy dữ liệu' });
   }
 });
 
@@ -38,7 +39,8 @@ app.post('/api/todos', async (req, res) => {
     const result = await pool.query('INSERT INTO todos (task) VALUES ($1) RETURNING *', [task]);
     res.json(result.rows[0]);
   } catch (err) {
-    res.status(500).send(err.message);
+    console.error(err);
+    res.status(500).json({ error: 'Lỗi thêm task' });
   }
 });
 
@@ -49,7 +51,8 @@ app.delete('/api/todos/:id', async (req, res) => {
     await pool.query('DELETE FROM todos WHERE id = $1', [id]);
     res.json({ success: true });
   } catch (err) {
-    res.status(500).send(err.message);
+    console.error(err);
+    res.status(500).json({ error: 'Lỗi xóa task' });
   }
 });
 
@@ -61,7 +64,8 @@ app.put('/api/todos/:id', async (req, res) => {
     const result = await pool.query('UPDATE todos SET completed = $1 WHERE id = $2 RETURNING *', [completed, id]);
     res.json(result.rows[0]);
   } catch (err) {
-    res.status(500).send(err.message);
+    console.error(err);
+    res.status(500).json({ error: 'Lỗi cập nhật task' });
   }
 });
 
