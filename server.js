@@ -15,33 +15,22 @@ const pool = new Pool({
 // 2. Tạo bảng dữ liệu nếu chưa có (Chạy 1 lần đầu)
 (async () => {
   try {
-    // Kiểm tra xem bảng có tồn tại không
-    const checkTable = await pool.query(
-      "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'todos')"
-    );
+    console.log('Initializing database...');
     
-    if (!checkTable.rows[0].exists) {
-      // Nếu bảng không tồn tại, tạo mới
-      await pool.query(`
-        CREATE TABLE todos (
-          id SERIAL PRIMARY KEY,
-          task TEXT NOT NULL,
-          completed BOOLEAN DEFAULT false
-        );
-      `);
-      console.log('Created todos table');
-    } else {
-      // Nếu bảng tồn tại, thêm cột nếu chưa có
-      await pool.query(`
-        ALTER TABLE todos ADD COLUMN IF NOT EXISTS id SERIAL PRIMARY KEY;
-      `).catch(() => {}); // Ignore error nếu cột đã tồn tại
-      
-      await pool.query(`
-        ALTER TABLE todos ADD COLUMN IF NOT EXISTS completed BOOLEAN DEFAULT false;
-      `).catch(() => {}); // Ignore error nếu cột đã tồn tại
-      
-      console.log('Todos table already exists, columns checked');
-    }
+    // Drop bảng cũ nếu tồn tại (để reset schema)
+    await pool.query('DROP TABLE IF EXISTS todos CASCADE;').catch(() => {});
+    
+    // Tạo bảng mới
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS todos (
+        id SERIAL PRIMARY KEY,
+        task TEXT NOT NULL,
+        completed BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    
+    console.log('Todos table created successfully');
   } catch (err) {
     console.error('Database initialization error:', err.message);
   }

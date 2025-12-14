@@ -7,9 +7,21 @@ function App() {
 
   useEffect(() => {
     fetch('/api/todos')
-      .then(res => res.json())
-      .then(data => setTodos(data))
-      .catch(err => console.error("Lỗi:", err));
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+        return res.json();
+      })
+      .then(data => {
+        if (Array.isArray(data)) {
+          setTodos(data);
+        } else {
+          console.error('API returned non-array data:', data);
+          setTodos([]);
+        }
+      })
+      .catch(err => console.error("Lỗi lấy todos:", err));
   }, []);
 
   const addTask = async (e) => {
