@@ -1,21 +1,20 @@
 import { useEffect, useState } from 'react';
+import './App.css';
 
 function App() {
   const [todos, setTodos] = useState([]);
   const [task, setTask] = useState('');
 
-  // 1. Khi web vừa load -> Gọi API lấy danh sách
   useEffect(() => {
-    fetch('/api/todos') // Gọi thẳng /api vì đang chạy chung domain (Monolith)
+    fetch('/api/todos')
       .then(res => res.json())
       .then(data => setTodos(data))
       .catch(err => console.error("Lỗi:", err));
   }, []);
 
-  // 2. Hàm thêm công việc mới
   const addTask = async (e) => {
-    e.preventDefault(); // Chặn load lại trang
-    if(!task) return;
+    e.preventDefault();
+    if(!task.trim()) return;
 
     try {
       const res = await fetch('/api/todos', {
@@ -24,43 +23,81 @@ function App() {
         body: JSON.stringify({ task })
       });
       const newTodo = await res.json();
-      
-      // Cập nhật giao diện ngay lập tức
       setTodos([...todos, newTodo]);
-      setTask(''); // Xóa ô nhập
+      setTask('');
     } catch (err) {
       alert("Lỗi thêm task: " + err);
     }
   };
 
-  return (
-    <div style={{ padding: "40px", fontFamily: "Arial", maxWidth: "600px", margin: "0 auto" }}>
-      <h1 style={{ color: "#646cff" }}>Project 2: Fullstack Render 🚀</h1>
-      <p>Node.js + React + PostgreSQL (Chạy chung 1 chỗ)</p>
-      
-      <form onSubmit={addTask} style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-        <input 
-          value={task} 
-          onChange={e => setTask(e.target.value)} 
-          placeholder="Nhập công việc cần làm..." 
-          style={{ padding: "10px", flex: 1, fontSize: "16px" }}
-        />
-        <button style={{ padding: "10px 20px", cursor: "pointer" }}>Thêm</button>
-      </form>
+  const deleteTask = async (id) => {
+    try {
+      await fetch(`/api/todos/${id}`, { method: 'DELETE' });
+      setTodos(todos.filter(t => t.id !== id));
+    } catch (err) {
+      alert("Lỗi xóa task: " + err);
+    }
+  };
 
-      <ul style={{ listStyle: "none", padding: 0 }}>
-        {todos.map(t => (
-          <li key={t.id} style={{ 
-            background: "#f4f4f4", 
-            margin: "5px 0", 
-            padding: "10px", 
-            borderRadius: "5px",
-            borderLeft: "5px solid #646cff"
-          }}>
-            {t.task}
-          </li>
-        ))}
-      </ul>
+  return (
+    <div className="app-container">
+      <div className="app-wrapper">
+        <div className="header">
+          <div className="header-content">
+            <h1>✨ My Tasks</h1>
+            <p>Quản lý công việc hàng ngày của bạn</p>
+          </div>
+        </div>
+
+        <form onSubmit={addTask} className="form-container">
+          <div className="input-group">
+            <input 
+              value={task} 
+              onChange={e => setTask(e.target.value)} 
+              placeholder="Thêm công việc mới..." 
+              className="input-field"
+              autoFocus
+            />
+            <button className="btn-add">
+              <span>➕</span> Thêm
+            </button>
+          </div>
+        </form>
+
+        <div className="stats">
+          <span className="stat-badge">{todos.length} công việc</span>
+        </div>
+
+        <div className="todos-container">
+          {todos.length === 0 ? (
+            <div className="empty-state">
+              <p>🎯 Hãy thêm công việc đầu tiên của bạn!</p>
+            </div>
+          ) : (
+            <ul className="todos-list">
+              {todos.map((t, index) => (
+                <li key={t.id} className="todo-item">
+                  <div className="todo-content">
+                    <span className="todo-number">{index + 1}</span>
+                    <span className="todo-text">{t.task}</span>
+                  </div>
+                  <button 
+                    onClick={() => deleteTask(t.id)}
+                    className="btn-delete"
+                    title="Xóa"
+                  >
+                    🗑️
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <footer className="app-footer">
+          <p>Made with ❤️ using React + Node.js</p>
+        </footer>
+      </div>
     </div>
   );
 }
