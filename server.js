@@ -26,17 +26,22 @@ async function initializeDatabase() {
     await pool.query('SELECT NOW()');
     console.log('✓ Database connection successful');
     
-    // Tạo table todos (cho project này)
+    // DROP table cũ nếu có (FORCE RESET)
+    console.log('Dropping old tables if exists...');
+    await pool.query(`DROP TABLE IF EXISTS todos CASCADE`);
+    console.log('✓ Old tables dropped');
+    
+    // Tạo table todos mới (cho project này)
     console.log('Creating todos table...');
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS todos (
+      CREATE TABLE todos (
         id SERIAL PRIMARY KEY,
         task TEXT NOT NULL,
         completed BOOLEAN DEFAULT false,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
+      )
     `);
-    console.log('✓ Table todos ready');
+    console.log('✓ Table todos created');
     
     // Kiểm tra columns
     const columns = await pool.query(`
