@@ -20,28 +20,33 @@ pool.on('error', (err) => {
 // 3. Tạo/reset bảng dữ liệu
 async function initializeDatabase() {
   try {
-    console.log('Initializing database...');
+    console.log('📋 Initializing database...');
     
     // Test connection
     await pool.query('SELECT NOW()');
-    console.log('Database connection successful');
+    console.log('✓ Database connection successful');
     
-    // Drop bảng cũ nếu tồn tại
-    console.log('Dropping old todos table if exists...');
-    await pool.query('DROP TABLE IF EXISTS todos CASCADE;');
-    
-    // Tạo bảng mới
-    console.log('Creating new todos table...');
-    const createTableResult = await pool.query(`
-      CREATE TABLE todos (
+    // Tạo table todos (cho project này)
+    console.log('Creating todos table...');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS todos (
         id SERIAL PRIMARY KEY,
         task TEXT NOT NULL,
         completed BOOLEAN DEFAULT false,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    console.log('✓ Table todos ready');
     
-    console.log('✓ Todos table created successfully');
+    // Kiểm tra columns
+    const columns = await pool.query(`
+      SELECT column_name FROM information_schema.columns 
+      WHERE table_name = 'todos'
+      ORDER BY ordinal_position
+    `);
+    const columnNames = columns.rows.map(c => c.column_name).join(', ');
+    console.log(`  Columns: ${columnNames}`);
+    
     return true;
   } catch (err) {
     console.error('✗ Database initialization error:', err.message);
@@ -59,6 +64,49 @@ app.get('/api/todos', async (req, res) => {
   } catch (err) {
     console.error('GET /api/todos error:', err.message);
     res.status(500).json({ error: 'Lỗi lấy dữ liệu: ' + err.message });
+  }
+});
+
+// Test DB endpoint
+app.get('/api/test-db', async (req, res) => {
+  try {
+    console.log('🔍 Testing database...');
+    
+    // Kiểm tra connection
+    const connTest = await pool.query('SELECT NOW()');
+    
+    // Kiểm tra tất cả tables
+    const tables = await pool.query(`
+      SELECT table_name FROM information_schema.tables 
+      WHERE table_schema = 'public'
+      ORDER BY table_name
+    `);
+    
+    // Kiểm tra columns của todos
+    const todosColumns = await pool.query(`
+      SELECT column_name, data_type FROM information_schema.columns 
+      WHERE table_name = 'todos'
+      ORDER BY ordinal_position
+    `);
+    
+    // Lấy sample data
+    const todos = await pool.query('SELECT COUNT(*) as count FROM todos');
+    
+    res.json({
+      status: 'OK ✓',
+      database: 'Connected',
+      tables: tables.rows.map(t => t.table_name),
+      todos_columns: todosColumns.rows,
+      todos_count: todos.rows[0].count,
+      message: '✓ Database setup correctly for Cách 1 (Multiple tables)'
+    });
+  } catch (err) {
+    console.error('❌ Database test error:', err.message);
+    res.status(500).json({ 
+      status: 'ERROR',
+      error: err.message,
+      hint: 'Database might not be initialized'
+    });
   }
 });
 
