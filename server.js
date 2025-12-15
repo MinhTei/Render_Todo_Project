@@ -12,17 +12,28 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false } // Bắt buộc cho Render
 });
 
-// 2. Tạo bảng dữ liệu nếu chưa có (Chạy 1 lần đầu)
-(async () => {
+// 2. Kiểm tra kết nối database
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
+});
+
+// 3. Tạo/reset bảng dữ liệu
+async function initializeDatabase() {
   try {
     console.log('Initializing database...');
     
-    // Drop bảng cũ nếu tồn tại (để reset schema)
-    await pool.query('DROP TABLE IF EXISTS todos CASCADE;').catch(() => {});
+    // Test connection
+    await pool.query('SELECT NOW()');
+    console.log('Database connection successful');
+    
+    // Drop bảng cũ nếu tồn tại
+    console.log('Dropping old todos table if exists...');
+    await pool.query('DROP TABLE IF EXISTS todos CASCADE;');
     
     // Tạo bảng mới
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS todos (
+    console.log('Creating new todos table...');
+    const createTableResult = await pool.query(`
+      CREATE TABLE todos (
         id SERIAL PRIMARY KEY,
         task TEXT NOT NULL,
         completed BOOLEAN DEFAULT false,
@@ -30,21 +41,24 @@ const pool = new Pool({
       );
     `);
     
-    console.log('Todos table created successfully');
+    console.log('✓ Todos table created successfully');
+    return true;
   } catch (err) {
-    console.error('Database initialization error:', err.message);
+    console.error('✗ Database initialization error:', err.message);
+    console.error('Error details:', err);
+    return false;
   }
-})();
+}
 
-// 3. API Lấy danh sách
+// 4. API Lấy danh sách
 app.get('/api/todos', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM todos ORDER BY id DESC');
+    const result = await pool.query('SELECT * FROM todos ORDER BY id ASC');
     console.log('GET /api/todos - returned', result.rows.length, 'todos');
     res.json(result.rows);
   } catch (err) {
     console.error('GET /api/todos error:', err.message);
-    res.status(500).json({ error: 'Lỗi lấy dữ liệu' });
+    res.status(500).json({ error: 'Lỗi lấy dữ liệu: ' + err.message });
   }
 });
 
@@ -65,7 +79,7 @@ app.post('/api/todos', async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     console.error('POST /api/todos error:', err.message);
-    res.status(500).json({ error: 'Lỗi thêm task' });
+    res.status(500).json({ error: 'Lỗi thêm task: ' + err.message });
   }
 });
 
@@ -87,7 +101,7 @@ app.delete('/api/todos/:id', async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error('DELETE /api/todos/:id error:', err.message);
-    res.status(500).json({ error: 'Lỗi xóa task' });
+    res.status(500).json({ error: 'Lỗi xóa task: ' + err.message });
   }
 });
 
@@ -123,7 +137,7 @@ app.put('/api/todos/:id', async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     console.error('PUT /api/todos/:id error:', err.message, err.stack);
-    res.status(500).json({ error: 'Lỗi cập nhật task', details: err.message });
+    res.status(500).json({ error: 'Lỗi cập nhật task: ' + err.message });
   }
 });
 
@@ -134,6 +148,18 @@ app.get(/.*/, (req, res) => {
   res.sendFile(path.join(__dirname, 'client/dist/index.html'));
 });
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
+// Start server AFTER initializing database
+async function start() {
+  const dbReady = await initializeDatabase();
+  
+  if (!dbReady) {
+    console.error('Failed to initialize database. Server will still start but may not work properly.');
+  }
+  
+  app.listen(port, () => {
+    console.log(`✓ Server running on port ${port}`);
+    console.log(`Database status: ${dbReady ? 'Ready ✓' : 'Not Ready ✗'}`);
+  });
+}
+
+start();
